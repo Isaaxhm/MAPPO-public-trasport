@@ -1,0 +1,8 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone
+CC,Corredores Concesionados,https://datos.cdmx.gob.mx/explore/dataset/rutas-y-corredores-del-transporte-publico-concesionado/table/,America/Mexico_City,ES,
+MB,Metrobus,https://www.metrobus.cdmx.gob.mx,America/Mexico_City,ES,5557616860
+METRO,Sistema de Transporte Colectivo Metro,https://www.metro.cdmx.gob.mx,America/Mexico_City,ES,5556274950
+TROLE,Trolebus,https://www.ste.cdmx.gob.mx/,America/Mexico_City,ES,5525950000
+RTP,Red de Transporte de Pasajeros,https://www.rtp.cdmx.gob.mx,America/Mexico_City,ES,5513286300
+TL,Servicio de Tren Ligero,https://www.ste.cdmx.gob.mx/tren-ligero,America/Mexico_City,ES,5525950000
+SUB,Ferrocarriles Suburbanos,http://www.fsuburbanos.com/,America/Mexico_City,ES,5553668200
