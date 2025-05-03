@@ -1,1 +1,0 @@
-print("MICAI voy por ti, 2025")
