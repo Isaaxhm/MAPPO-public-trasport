@@ -4,6 +4,7 @@ import pandas as pd
 from shapely.geometry import LineString, Point
 from shapely.ops import unary_union
 import numpy as np
+from utils.calculations import calculate_num_buses, calculate_headway_min, calculate_avg_speed, calculate_demand_est
 
 
 def load_gtfs_data(gtfs_dir):
@@ -74,33 +75,10 @@ def process_routes(data):
         trips_r = trips[trips["route_id"] == route_id]
         trip_ids = trips_r["trip_id"].unique()
 
-        num_buses = len(trip_ids)
-
-        if not frequencies.empty:
-            freqs_r = frequencies[frequencies["trip_id"].isin(trip_ids)]
-            headway_min = freqs_r["headway_secs"].mean() / 60.0
-        else:
-            deps = stop_times[stop_times["trip_id"].isin(trip_ids)]
-            headway_min = deps.groupby("trip_id")["dep_secs"].apply(
-                lambda arr: np.diff(np.sort(arr)).mean() / 60
-            ).mean()
-
-        avg_speeds = []
-        for sid in trips_r["shape_id"].dropna().unique():
-            pts = shapes_grouped.get_group(sid).values
-            # Convert coordinates in pts to float if they are strings
-            pts_float = [
-                [float(coord.replace(",", ".")) if isinstance(coord, str) else float(coord) for coord in pt]
-                for pt in pts
-            ]
-            line = LineString(pts_float)
-            duration = stop_times[
-                stop_times["trip_id"].isin(trips_r[trips_r["shape_id"] == sid]["trip_id"])
-            ].agg({"arr_secs": "max", "dep_secs": "min"})
-            travel_time = duration["arr_secs"] - duration["dep_secs"]
-            if travel_time > 0:
-                avg_speeds.append((line.length) / (travel_time / 3600))
-        avg_speed = np.mean(avg_speeds) if avg_speeds else None
+        num_buses = calculate_num_buses(trip_ids)
+        headway_min = calculate_headway_min(frequencies, stop_times, trip_ids)
+        avg_speed = calculate_avg_speed(shapes_grouped, stop_times, trips_r)
+        demand_est = calculate_demand_est(stop_times, trip_ids)
 
         pts = [
             Point((lat),(lon))
@@ -115,16 +93,12 @@ def process_routes(data):
         else:
             coverage_area = None
 
-        demand_est = stop_times[stop_times["trip_id"].isin(trip_ids)] \
-                      .groupby("stop_id").size().mean()
-
         # Write route summary to a text file
         with open(os.path.join("data/route_summaries.txt"), "a") as f:
             f.write(f"Route {route_id}: buses={num_buses}, headway={headway_min:.2f}min, "
-                    f"speed={avg_speed:.2f}, demand={demand_est:.2f}\n")
-            
-        n += 1
+                    f"speed={avg_speed:.2f}, coverage={coverage_area:.2f}, demand={demand_est:.2f}\n")
 
+        n += 1
 
         # Append route summary to the list
         route_summaries.append({
@@ -135,7 +109,6 @@ def process_routes(data):
             "coverage_area": coverage_area,
             "demand_est": demand_est
         })
-        
 
     return pd.DataFrame(route_summaries)
 
