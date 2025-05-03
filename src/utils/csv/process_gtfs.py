@@ -120,8 +120,8 @@ def process_routes(data):
 
         # Write route summary to a text file
         with open(os.path.join("data/route_summaries.txt"), "a") as f:
-            f.write(f"numero: {n} Route {route_id}: buses={num_buses}, headway={headway_min:.2f}min, "
-                    f"speed={avg_speed:.2f}, coverage={coverage_area:.2f}, demand={demand_est:.2f}\n")
+            f.write(f"Route {route_id}: buses={num_buses}, headway={headway_min:.2f}min, "
+                    f"speed={avg_speed:.2f}, demand={demand_est:.2f}\n")
             
         n += 1
 
