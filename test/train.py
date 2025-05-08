@@ -6,6 +6,7 @@ from pettingzoo.utils import parallel_to_aec, aec_to_parallel # Utilities
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 import numpy as np
+import xlsxwriter
 
 # --- 1. Load the data (Used potentially for initializing the environment) ---
 file_path = 'data/route_summaries.txt'
@@ -178,6 +179,34 @@ class SingleAgentWrapper(gym.Env):
         done = terminations[self.agent_id] or truncations[self.agent_id]
         return obs[self.agent_id], rewards[self.agent_id], terminations[self.agent_id], truncations[self.agent_id], infos[self.agent_id]
 
+# Crear un archivo Excel para guardar los resultados
+workbook = xlsxwriter.Workbook('training_results.xlsx')
+worksheet = workbook.add_worksheet()
+
+# Escribir encabezados en el archivo Excel
+headers = ['Iteration', 'Total Timesteps', 'FPS', 'Episode Length Mean', 'Episode Reward Mean', 'Loss', 'Value Loss', 'Policy Gradient Loss']
+for col, header in enumerate(headers):
+    worksheet.write(0, col, header)
+
+row = 1  # Fila inicial para los datos
+
+# Modificar el bucle de entrenamiento para registrar métricas
+def log_metrics(iteration, metrics):
+    global row
+    data = [
+        iteration,
+        metrics['total_timesteps'],
+        metrics['fps'],
+        metrics['ep_len_mean'],
+        metrics['ep_rew_mean'],
+        metrics['loss'],
+        metrics['value_loss'],
+        metrics['policy_gradient_loss']
+    ]
+    for col, value in enumerate(data):
+        worksheet.write(row, col, value)
+    row += 1
+
 # Entrenamiento con Stable-Baselines3
 if __name__ == "__main__":
     env = BusRouteMultiAgentEnv(route_data=dataset_df)
@@ -185,7 +214,14 @@ if __name__ == "__main__":
     vec_env = make_vec_env(lambda: single_agent_env, n_envs=1)
 
     model = PPO("MlpPolicy", vec_env, verbose=1)
-    model.learn(total_timesteps=100000)
+
+    for iteration in range(1, 101):  # 100 iteraciones como ejemplo
+        model.learn(total_timesteps=2048, reset_num_timesteps=False)
+        metrics = model.logger.name_to_value
+        log_metrics(iteration, metrics)
 
     # Guardar el modelo entrenado
     model.save("bus_route_model")
+
+    # Cerrar el archivo Excel
+    workbook.close()
