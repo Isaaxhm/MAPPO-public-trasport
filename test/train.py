@@ -3,6 +3,9 @@ import gymnasium as gym
 from gymnasium.spaces import Box, Discrete # Used for defining observation/action spaces
 import pettingzoo # A common library for multi-agent environments
 from pettingzoo.utils import parallel_to_aec, aec_to_parallel # Utilities
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+import numpy as np
 
 # --- 1. Load the data (Used potentially for initializing the environment) ---
 file_path = 'data/route_summaries.txt'
@@ -20,7 +23,9 @@ try:
                 metrics = {}
                 for item in metrics_str.split(', '):
                     key, value = item.split('=')
-                    metrics[key] = float(value.replace('min', '')) # Convert headway string to float
+                    key = key.strip()  # Eliminar espacios adicionales
+                    value = value.strip().replace('min', '')  # Eliminar 'min' y espacios
+                    metrics[key] = float(value)
                 data.append({'route': route_name, **metrics})
 
     dataset_df = pd.DataFrame(data)
@@ -71,15 +76,10 @@ class BusRouteMultiAgentEnv(pettingzoo.ParallelEnv):
         return self._action_spaces[agent]
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)
         self.agents = self.possible_agents[:]
         self.timestep = 0
-
-        # Initialize the environment state based on route_data and potentially other factors
-        # This is a complex simulation step
-        self.state = self._initialize_state() # YOU NEED TO IMPLEMENT _initialize_state
-
-        observations = self._get_observations() # YOU NEED TO IMPLEMENT _get_observations
+        self.state = self._initialize_state()
+        observations = self._get_observations()
         infos = {agent: {} for agent in self.agents}
         return observations, infos
 
@@ -88,11 +88,10 @@ class BusRouteMultiAgentEnv(pettingzoo.ParallelEnv):
 
         # Apply the actions from all agents to the environment
         # Update the environment state based on actions and dynamics
-        # This is a complex simulation step
-        self._apply_actions_and_update_state(actions) # YOU NEED TO IMPLEMENT _apply_actions_and_update_state
+        self._apply_actions_and_update_state(actions)
 
         # Calculate rewards for each agent
-        rewards = self._calculate_rewards() # YOU NEED TO IMPLEMENT _calculate_rewards
+        rewards = self._calculate_rewards()
 
         # Determine if the episode is finished
         terminations = {agent: False for agent in self.agents}
@@ -101,14 +100,9 @@ class BusRouteMultiAgentEnv(pettingzoo.ParallelEnv):
              truncations = {agent: True for agent in self.agents}
 
         # Get observations for the next state
-        observations = self._get_observations() # YOU NEED TO IMPLEMENT _get_observations
+        observations = self._get_observations()
 
         infos = {agent: {} for agent in self.agents}
-
-        # Check if any agents are done (if applicable in your scenario)
-        # agents_to_remove = [agent for agent in self.agents if terminations[agent] or truncations[agent]]
-        # self.agents = [agent for agent in self.agents if agent not in agents_to_remove]
-        # If all agents are done, the env is done
 
         return observations, rewards, terminations, truncations, infos
 
@@ -126,24 +120,23 @@ class BusRouteMultiAgentEnv(pettingzoo.ParallelEnv):
         return state
 
     def _apply_actions_and_update_state(self, actions):
-        # Logic to simulate the effect of agents' actions on the environment state
-        # Example: If action is 'Increase Speed', update the speed variable for that route
-        print("NOTE: _apply_actions_and_update_state needs implementation!")
-        # Example: Dummy state update
         for agent, action in actions.items():
-             # Based on 'action', update self.state[agent]
-             pass # Simulation logic goes here
+            if action == 0:  # Disminuir velocidad
+                self.state[agent]['speed'] = max(0, self.state[agent]['speed'] - 0.01)
+            elif action == 1:  # Mantener velocidad
+                pass
+            elif action == 2:  # Aumentar velocidad
+                self.state[agent]['speed'] += 0.01
+
+            # Actualizar headway y demanda basados en la nueva velocidad
+            self.state[agent]['headway'] = max(1, self.state[agent]['headway'] - self.state[agent]['speed'] * 0.1)
+            self.state[agent]['demand'] = max(0, self.state[agent]['demand'] - self.state[agent]['speed'] * 0.05)
 
     def _calculate_rewards(self):
-        # Logic to calculate the reward for each agent based on the current state
-        # Example: Reward could be based on inverse of average passenger wait time,
-        # or efficiency metrics.
-        print("NOTE: _calculate_rewards needs implementation!")
-        rewards = {agent: 0.0 for agent in self.agents}
-        # Example: Dummy reward
-        for agent in self.agents:
-            rewards[agent] = -self.state[agent]['headway'] # Minimize headway (example)
-            # Add terms for demand satisfaction, costs, etc.
+        rewards = {}
+        for agent, data in self.state.items():
+            # Penalizar headway alto y recompensar velocidad eficiente
+            rewards[agent] = -data['headway'] + data['speed'] * 0.5
         return rewards
 
     def _get_observations(self):
@@ -167,63 +160,32 @@ class BusRouteMultiAgentEnv(pettingzoo.ParallelEnv):
         pass
 
 
-# --- 3. Choose and Configure a MAPPO Implementation ---
-# You would typically use a library built on top of PettingZoo or a dedicated one.
-# Example using a conceptual 'MAPPOTrainer' (this class doesn't exist,
-# you'd use a class from a library like RLlib or a custom one)
-
-# from your_rl_library import MAPPOTrainer # Replace with actual import
-
-class MAPPOTrainer: # Placeholder
-    def __init__(self, env, config):
-        print("NOTE: MAPPOTrainer is a placeholder. Use RLlib, Stable-Baselines3+wrappers, or similar.")
+# Configuración del entorno para Stable-Baselines3
+class SingleAgentWrapper(gym.Env):
+    def __init__(self, env, agent_id):
         self.env = env
-        self.config = config
-        # Initialize policy and value networks here
-        # self.policies = ...
-        # self.critics = ...
+        self.agent_id = agent_id
+        self.observation_space = env.observation_space(agent_id)
+        self.action_space = env.action_space(agent_id)
 
-    def train(self, total_timesteps):
-        print(f"NOTE: Training loop logic needs implementation in a real RL library.")
-        print(f"Simulating training for {total_timesteps} timesteps.")
-        # Basic conceptual loop
-        # env.reset()
-        # for step in range(total_timesteps):
-        #     actions = {}
-        #     # Get actions from policies based on observations
-        #     # for agent in env.agents:
-        #     #    obs = env.observation_space(agent).sample() # Get actual obs
-        #     #    actions[agent] = self.policies[agent](obs)
-        #     #
-        #     # next_obs, rewards, terminations, truncations, infos = env.step(actions)
-        #     # Store transition, calculate advantages, update networks etc.
-        #     pass
-        print("Training simulation finished.")
+    def reset(self, seed=None, options=None):
+        obs, infos = self.env.reset(seed=seed, options=options)
+        return obs[self.agent_id], infos[self.agent_id]
 
-# --- 4. Instantiate Environment and Trainer ---
-# Create the environment using the loaded data
-env = BusRouteMultiAgentEnv(route_data=dataset_df)
+    def step(self, action):
+        actions = {self.agent_id: action}
+        obs, rewards, terminations, truncations, infos = self.env.step(actions)
+        done = terminations[self.agent_id] or truncations[self.agent_id]
+        return obs[self.agent_id], rewards[self.agent_id], terminations[self.agent_id], truncations[self.agent_id], infos[self.agent_id]
 
-# Define training configuration (hyperparameters for MAPPO)
-mappo_config = {
-    "gamma": 0.99,
-    "lr": 0.0003,
-    "clip_ratio": 0.2,
-    "ppo_epochs": 10,
-    "batch_size": 64,
-    "vf_coef": 0.5,
-    "ent_coef": 0.01,
-    "max_grad_norm": 0.5,
-    # Add multi-agent specific configs if needed (e.g., central critic)
-}
+# Entrenamiento con Stable-Baselines3
+if __name__ == "__main__":
+    env = BusRouteMultiAgentEnv(route_data=dataset_df)
+    single_agent_env = SingleAgentWrapper(env, agent_id=env.possible_agents[0])
+    vec_env = make_vec_env(lambda: single_agent_env, n_envs=1)
 
-# Instantiate the trainer (using the placeholder)
-trainer = MAPPOTrainer(env=env, config=mappo_config)
+    model = PPO("MlpPolicy", vec_env, verbose=1)
+    model.learn(total_timesteps=100000)
 
-# --- 5. Run Training ---
-total_timesteps = 1000000 # Define how long to train
-trainer.train(total_timesteps=total_timesteps)
-
-print("\nConceptual training setup complete.")
-print("Remember: The 'BusRouteMultiAgentEnv' and 'MAPPOTrainer' are placeholders.")
-print("You need to implement the environment dynamics and use a real multi-agent RL library.")
+    # Guardar el modelo entrenado
+    model.save("bus_route_model")
