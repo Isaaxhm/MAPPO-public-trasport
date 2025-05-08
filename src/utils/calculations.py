@@ -1,3 +1,6 @@
+from shapely.geometry import LineString
+import numpy as np
+
 def calculate_num_buses(trip_ids):
     """
     Calculate the number of buses based on the number of unique trip IDs.
