@@ -32,3 +32,8 @@ Opcionalmente, puedes incluir:
 - Tecnologías utilizadas.
 - Enlaces a documentación adicional.
 - Historial de cambios (changelog).
+
+
+# Actividades 
+
+
