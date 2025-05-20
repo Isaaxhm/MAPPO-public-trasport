@@ -1,5 +1,5 @@
 # Import the GPU module to check tensor operations
-from utils.gpu.gpu import check_tensor_operations
+from utils.gpu.diagnostic_gpu import check_tensor_operations
 from utils.csv.process_gtfs import load_gtfs_data, process_routes, save_route_summaries
 
 def main():
@@ -15,7 +15,7 @@ def process_csv():
     Main function to load GTFS data, process routes, and save the results.
     """
 
-    GTFS_DIR = "data/gtfs/CDMX"  # Change this to your GTFS directory path
+    GTFS_DIR = "data/gtfs/CDMX" 
     OUTPUT_DIR = "data/processed"
 
     # Load GTFS data
@@ -24,7 +24,9 @@ def process_csv():
     # Process routes
     df_routes = process_routes(data)
     print(df_routes.head())
+
+
     
 if __name__ == "__main__": 
     main()
-    process_csv()
+    ##process_csv()
