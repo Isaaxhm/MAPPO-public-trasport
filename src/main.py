@@ -10,13 +10,13 @@ def main():
     device = check_tensor_operations()
     print(f"Main function executed on device: {device}")
 
+
 def process_csv():
     """
     Main function to load GTFS data, process routes, and save the results.
     """
 
-    GTFS_DIR = "data/gtfs/CDMX" 
-    OUTPUT_DIR = "data/processed"
+
 
     # Load GTFS data
     data = load_gtfs_data(GTFS_DIR)
@@ -29,4 +29,9 @@ def process_csv():
     
 if __name__ == "__main__": 
     main()
+
+    GTFS_DIR = "data/gtfs/CDMX" 
+    OUTPUT_DIR = "data/processed"
+
+    
     ##process_csv()
