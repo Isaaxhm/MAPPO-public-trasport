@@ -12,10 +12,8 @@ def check_tensor_operations():
     """
     # Check if CUDA is available
     if torch.cuda.is_available():
-        print("CUDA is available.\nTensor operations can be performed on GPU.")
         device = torch.device("cuda")
     else:
-        print("CUDA is not available.\nTensor operations will be performed on CPU.")
         device = torch.device("cpu")
     
     return device
