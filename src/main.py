@@ -24,8 +24,6 @@ def process_csv():
     # Process routes
     df_routes = process_routes(data)
     print(df_routes.head())
-    # Save route summaries
-    #save_route_summaries(df_routes, OUTPUT_DIR)
     
 if __name__ == "__main__": 
     main()
